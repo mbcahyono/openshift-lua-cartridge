@@ -1,0 +1,27 @@
+server {
+  listen  <%= ENV['OPENSHIFT_LAPIS_IP'] %>:<%= ENV['OPENSHIFT_LAPIS_PORT'] %>;
+  root    <%= ENV['OPENSHIFT_REPO_DIR'] %>public;
+  lua_code_cache on;
+
+  location / {
+    default_type text/html;
+    content_by_lua "ngx.say('Hello world!')";
+  }
+
+  location /favicon.ico {
+    access_log off;
+    log_not_found off;
+    error_log off;
+  }
+
+  location @imageproxy {
+    lua_use_default_type off;
+    content_by_lua_file <%= ENV['OPENSHIFT_REPO_DIR'] %>resize.lua;
+  }
+  location /resize {
+    default_type image/jpeg;
+    root <%= ENV['OPENSHIFT_DATA_DIR'] %>cache;
+    try_files /$arg_url @imageproxy;
+  }
+}
+

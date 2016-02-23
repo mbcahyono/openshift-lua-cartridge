@@ -1,0 +1,15 @@
+#!/bin/bash -e
+
+case "$1" in
+  -v|--version)
+    version="$2"
+esac
+
+# Parse arguments
+source "lib/util"
+parse_args $@
+
+# Don't set -eo until after the above arg parsing is complete
+# This is the OpenResty setup
+set -eo pipefail
+

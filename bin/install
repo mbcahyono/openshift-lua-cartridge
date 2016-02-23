@@ -1,0 +1,33 @@
+#!/bin/bash
+
+set -u
+
+version=${OPENRESTY_VERSION:-1.9.3.1}
+
+LAPIS_USR_DIR=$OPENSHIFT_LAPIS_DIR/usr/${version}
+
+# The user's repo path for their application
+REPO_LUA_PATH="$OPENSHIFT_REPO_DIR/?.lua;$OPENSHIFT_REPO_DIR/init/?.lua"
+# OpenResty's paths
+OPENRESTY_LUA_PATH="$LAPIS_USR_DIR/share/lua/5.1/?.lua;$LAPIS_USR_DIR/lualib/?.lua"
+# LuaRocks' paths
+LUAROCKS_LUA_PATH="$OPENSHIFT_DEPENDENCIES_DIR/share/lua/5.1/?.lua;$OPENSHIFT_DEPENDENCIES_DIR/share/lua/5.1/?/init.lua"
+
+LUA_PATH="$REPO_LUA_PATH;$OPENRESTY_LUA_PATH;$LUAROCKS_LUA_PATH;;"
+LUA_CPATH="$LAPIS_USR_DIR/lualib/?.so;$OPENSHIFT_DEPENDENCIES_DIR/lib/lua/5.1/?.so;;;"
+LUAROCKS_CONFIG="$OPENSHIFT_DEPENDENCIES_DIR/luarocks-config.lua"
+
+echo "$version" > $OPENSHIFT_LAPIS_DIR/env/OPENRESTY_VERSION
+echo "$LUA_PATH" > $OPENSHIFT_LAPIS_DIR/env/LUA_PATH
+echo "$LUA_CPATH" > $OPENSHIFT_LAPIS_DIR/env/LUA_CPATH
+echo "$LUAROCKS_CONFIG" > $OPENSHIFT_LAPIS_DIR/env/LUAROCKS_CONFIG
+echo "$LAPIS_USR_DIR/bin/luarocks" > $OPENSHIFT_LAPIS_DIR/env/LUAROCKS
+#echo "$OPENSHIFT_DEPENDENCIES_DIR/bin/moonc" > $OPENSHIFT_LAPIS_DIR/env/MOONC
+#echo "$OPENSHIFT_DEPENDENCIES_DIR/bin/moon" > $OPENSHIFT_LAPIS_DIR/env/MOON
+#echo "$OPENSHIFT_DEPENDENCIES_DIR/bin/lapis" > $OPENSHIFT_LAPIS_DIR/env/LAPIS
+
+for dir in logs run; do
+	mkdir -p $OPENSHIFT_LAPIS_DIR/$dir
+done
+
+mkdir -p $OPENSHIFT_DATA_DIR/cache

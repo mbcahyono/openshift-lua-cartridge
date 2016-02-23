@@ -1,0 +1,110 @@
+#!/bin/bash
+
+source $OPENSHIFT_CARTRIDGE_SDK_BASH
+
+OPENRESTY_EXEC=$OPENSHIFT_LAPIS_DIR/usr/$OPENRESTY_VERSION/nginx/sbin/nginx
+OPENRESTY_CONFIG_FILE=$OPENSHIFT_LAPIS_DIR/conf/nginx.conf
+OPENRESTY_PID_FILE=$OPENSHIFT_LAPIS_DIR/run/nginx.pid
+
+# We need libluajit
+export LD_LIBRARY_PATH=$OPENSHIFT_LAPIS_DIR/usr/$OPENRESTY_VERSION/luajit/lib
+
+function start() {
+    echo "Starting OpenResty"
+
+    if [ -f "$OPENRESTY_EXEC" ]; then
+
+        if [ -f "$OPENSHIFT_REPO_DIR/nginx.conf.erb" ]; then
+            oo-erb $OPENSHIFT_REPO_DIR/nginx.conf.erb > $OPENSHIFT_REPO_DIR/nginx.conf
+        fi
+
+        # nginx will always use the prefix defined at compile time unless an absolute path to the conf file is given
+        nohup "$OPENRESTY_EXEC" -c "$OPENRESTY_CONFIG_FILE" 2>&1
+        [ "$?" == "0" ] && wait_for_pid_file $OPENRESTY_PID_FILE
+
+    else
+        echo "WARN: Could not find the compiled application $OPENRESTY_EXEC, will not start"
+    fi
+}
+
+
+function stop() {
+    echo "Stopping OpenResty"
+
+    if [ -f "$OPENRESTY_PID_FILE" ]; then
+        pid=`cat "$OPENRESTY_PID_FILE" 2> /dev/null`
+        eval "'$OPENRESTY_EXEC' -c '$OPENRESTY_CONFIG_FILE' -s stop"
+        wait_for_stop $pid
+    fi
+}
+
+
+function restart() {
+    echo "Restarting OpenResty"
+    stop
+    start
+}
+
+
+function status() {
+    res=0
+    output=$(curl -s -m 30 http://$OPENSHIFT_OPENRESTY_IP:$OPENSHIFT_OPENRESTY_PORT/ &> /dev/null) || res=1
+
+    if [ $res -eq 0 ]
+    then
+        client_result "OpenResty is running"
+        client_result "$output"
+    else
+        client_result "OpenResty is either stopped or inaccessible"
+    fi
+}
+
+
+function reload() {
+    echo "Reloading OpenResty"
+
+    if [ -f "$OPENRESTY_PID_FILE" ]
+    then
+        pid=`cat "$OPENRESTY_PID_FILE" 2> /dev/null`
+        output=$("$OPENRESTY_EXEC" -c "$OPENRESTY_CONFIG_FILE" -s reload)
+        client_result "$output"
+    else
+        client_result "Cannot reload OpenResty as it is not running"
+    fi
+}
+
+
+function tidy() {
+    client_message "Emptying log dir: $OPENSHIFT_LAPIS_DIR/logs"
+    shopt -s dotglob
+    rm -rf logs/*
+}
+
+
+function update() {
+    version=${OPENRESTY_VERSION:-1.9.3.1}
+
+    echo "Rebuilding OpenResty v$version"
+    stop
+
+    mkdir -p tmp/build
+    bin/compile tmp/build
+
+    bin_dir="usr/$version/bin"
+    mkdir -p $bin_dir
+    cp -rf tmp/build/out/. $bin_dir
+
+    rm -rf tmp/build
+}
+
+
+case "$1" in
+  start)     start ;;
+  stop)      stop ;;
+  restart)   restart ;;
+  status)    status ;;
+  reload)    reload ;;
+  tidy)      tidy ;;
+  update)    update ;;
+  *)         exit 0
+esac
