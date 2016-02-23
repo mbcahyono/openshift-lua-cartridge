@@ -11,6 +11,8 @@ install_dir="$build_dir/usr/$version"
 src_dir="$OPENSHIFT_BUILD_DEPENDENCIES_DIR"
 MAKE_JOBS=$(grep processor /proc/cpuinfo  | wc -l)
 
+mkdir -p $install_dir
+
 pcre_ver=${PCRE_VERSION:-8.33}
 pcre_file=${PCRE_FILE:-pcre-$pcre_ver.tar.gz}
 pcre_url=${PCRE_URL:-http://sourceforge.net/projects/pcre/files/pcre/$pcre_ver/$pcre_file}
