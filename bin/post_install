@@ -5,7 +5,7 @@ source "lib/util"
 
 version=${OPENRESTY_VERSION:-1.9.3.1}
 
-LAPIS_USR_DIR=$OPENSHIFT_LAPIS_DIR/usr/${version}
+LAPIS_USR_DIR="$OPENSHIFT_LAPIS_DIR"usr/${version}
 
 # Versions for Luarocks to install
 #MOONSCRIPT_VERSION=${MOONSCRIPT_VERSION:-0.3.1}
