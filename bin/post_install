@@ -17,6 +17,6 @@ luarocks_config "$OPENSHIFT_DEPENDENCIES_DIR/luarocks-config.lua" "$OPENSHIFT_DE
 #$LAPIS_USR_DIR/bin/luarocks install moonscript $MOONSCRIPT_VERSION
 #$LAPIS_USR_DIR/bin/luarocks install lapis $LAPIS_VERSION
 
-$LAPIS_USR_DIR/bin/luarocks install magick
-$LAPIS_USR_DIR/bin/luarocks install lua-resty-http
+#$LAPIS_USR_DIR/bin/luarocks install magick
+#$LAPIS_USR_DIR/bin/luarocks install lua-resty-http
 
