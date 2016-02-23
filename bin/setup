@@ -11,5 +11,114 @@ parse_args $@
 
 # Don't set -eo until after the above arg parsing is complete
 # This is the OpenResty setup
+#!/bin/bash -e
+
+source "lib/util"
+
+# This is the OpenResty setup
 set -eo pipefail
+
+version=${OPENRESTY_VERSION:-1.9.3.1}
+build_dir=$(dirname $(dirname $(cd $(dirname $0) && pwd)))
+install_dir="$build_dir/usr/$version"
+src_dir="$OPENSHIFT_BUILD_DEPENDENCIES_DIR"
+MAKE_JOBS=$(grep processor /proc/cpuinfo  | wc -l)
+
+#mkdir -p $install_dir
+
+pcre_ver=${PCRE_VERSION:-8.33}
+pcre_file=${PCRE_FILE:-pcre-$pcre_ver.tar.gz}
+pcre_url=${PCRE_URL:-http://sourceforge.net/projects/pcre/files/pcre/$pcre_ver/$pcre_file}
+
+openresty_ver=${OPENRESTY_VERSION:-1.9.3.1}
+openresty_file=${OPNERESTY_FILE:-ngx_openresty-$openresty_ver.tar.gz}
+openresty_url=${OPENRESTY_URL:-http://openresty.org/download/$openresty_file}
+
+luarocks_ver=${LUAROCKS_VERSION:-2.2.2}
+luarocks_file=${LUAROCKS_FILE:-luarocks-$luarocks_ver.tar.gz}
+luarocks_url=${LUAROCKS_URL:-http://luarocks.org/releases/$luarocks_file}
+
+# Needed for ldconfig
+export PATH=$PATH:/sbin
+
+# Needed so we don't need the full path after installing
+export PATH=$install_dir/bin:$PATH
+
+build_PCRE()
+{
+	# no build step
+	return
+}
+
+install_PCRE()
+{
+	# no install step
+	return
+}
+
+build_OpenResty()
+{
+	echo "       Building OpenResty"
+	cd $src_dir/OpenResty-$openresty_ver/ngx_openresty-$openresty_ver/
+	./configure --prefix=/ --with-pcre=$src_dir/PCRE-$pcre_ver/pcre-$pcre_ver/ --with-http_ssl_module
+	make -j${MAKE_JOBS:-2}
+
+}
+
+install_OpenResty()
+{
+	cd $src_dir/OpenResty-$openresty_ver/ngx_openresty-$openresty_ver/
+	[ -d $install_dir/luajit/include ] && rm -rf $install_dir/luajit/include
+	make DESTDIR=$install_dir/ install
+	# LuaRocks not finding luajit's headers
+	ln -sf $install_dir/luajit/include/luajit-*/* $install_dir/luajit/include/
+	# LuaRocks needs to find luajit's executable as lua
+	ln -sf $install_dir/luajit/bin/luajit* $install_dir/luajit/bin/lua
+}
+
+build_LuaRocks()
+{
+	echo "       Building LuaRocks"
+	cd $src_dir/LuaRocks-$luarocks_ver/luarocks-$luarocks_ver/
+	./configure --prefix=/ --with-lua=$install_dir/luajit
+	make
+}
+
+install_LuaRocks()
+{
+	cd $src_dir/LuaRocks-$luarocks_ver/luarocks-$luarocks_ver/
+	make DESTDIR=$install_dir/ install
+	#luarocks_config $install_dir
+	ln -sf $install_dir/etc/luarocks/config-5.1.lua $install_dir/etc/luarocks/config.lua
+}
+
+# Arguments:
+# Name
+# Version
+# url
+# filename
+get_ver()
+{
+	if test -d $src_dir/$1-$2
+	then
+		echo "-----> Using $1 $2"
+		install_$1
+	else
+		mkdir -p $src_dir/$1-$2
+		cd $src_dir/$1-$2
+		echo "       First download, may take several minutes"
+		echo "-----> Installing $1 $2..."
+		curl -sOL $3
+		tar zxf $4
+		rm -f $4
+		build_$1
+		install_$1
+		echo " done"
+	fi
+}
+
+mkdir -p $src_dir
+get_ver "PCRE" "$pcre_ver" "$pcre_url" "$pcre_file"
+get_ver "OpenResty" "$openresty_ver" "$openresty_url" "$openresty_file"
+get_ver "LuaRocks" "$luarocks_ver" "$luarocks_url" "$luarocks_file"
 
