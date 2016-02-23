@@ -19,7 +19,7 @@ source "lib/util"
 set -eo pipefail
 
 version=${OPENRESTY_VERSION:-1.9.3.1}
-build_dir=$(dirname $(dirname $(cd $(dirname $0) && pwd)))
+build_dir=$OPENSHIFT_LAPIS_DIR #/$(dirname $(dirname $(cd $(dirname $0) && pwd)))
 install_dir="$build_dir/usr/$version"
 src_dir="$OPENSHIFT_BUILD_DEPENDENCIES_DIR"
 MAKE_JOBS=$(grep processor /proc/cpuinfo  | wc -l)
